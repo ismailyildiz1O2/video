@@ -15,8 +15,12 @@ contextBridge.exposeInMainWorld('studio', {
   },
   skill: {
     status: () => ipcRenderer.invoke('skill:status'),
-    install: (force) => ipcRenderer.invoke('skill:install', force),
-    onProgress: on('skill:progress'),
+  },
+  setup: {
+    run: (opts) => ipcRenderer.invoke('setup:run', opts),
+    running: () => ipcRenderer.invoke('setup:running'),
+    onProgress: on('setup:progress'),
+    onDone: on('setup:done'),
   },
   requirements: () => ipcRenderer.invoke('req:check'),
   projects: {

@@ -9,7 +9,7 @@
 - **İzinler:** Ajan bir komut çalıştırmak istediğinde (render, ffmpeg…) sorar. "Bu oturumda tüm komutlara izin ver" ile tekrar tekrar sorulmaz. Proje klasöründeki dosya yazma ve düzenlemeler otomatik onaylanır.
 - **Önizleme paneli:** Projedeki taslaklar, kareler ve ses dosyaları sağ panelde listelenir. Yeni bir video oluşunca kendiliğinden oynatılır.
 - **cinecode kiti otomatik kurulur:** İlk açılışta GitHub'dan indirilir (git gerekmez) ve `~/.claude/skills/cinecode` klasörüne konur. Açılışta güncellenir. Kiti daha önce elle kurduysan o kopya kullanılır ve uygulama ona dokunmaz.
-- **Gereksinim denetimi:** Node.js 22+, Python 3.9+, ffmpeg ve Chrome'un kurulu olup olmadığını gösterir. Eksik olanı ajan da senin onayınla kurmayı teklif eder.
+- **Eksik araçlar kendiliğinden kurulur:** Python, ffmpeg ve Node.js yoksa uygulama bunların taşınabilir sürümlerini kendi klasörüne indirir (Windows ve Linux'ta üçü de; macOS'ta Python ve Node.js). Bilgisayara sistem geneli bir şey yüklenmez. Chrome yerine Windows'taki Edge de kullanılabilir.
 
 ## Mimari
 
@@ -31,7 +31,7 @@ Filmi üreten şey Claude'dur: uygulama Claude Agent SDK ile Claude Code'un ajan
 ## Gereksinimler
 
 - Bir **Anthropic API anahtarı** ([console.anthropic.com](https://console.anthropic.com/settings/keys)). Kullanım ücreti API hesabına yazılır. Kısa bir film bile çok sayıda ajan adımı demektir; maliyet her turun sonunda gösterilir.
-- Node.js 22+, Python 3.9+, ffmpeg, Chrome/Chromium/Edge ve Chrome'un kullanabildiği bir GPU (cinecode'un kendi gereksinimleri).
+- Chrome, Chromium ya da Edge ve tarayıcının kullanabildiği bir GPU. Python, ffmpeg ve Node.js'i uygulama kendisi kurar.
 
 ## Geliştirme
 

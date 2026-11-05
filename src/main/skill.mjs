@@ -84,9 +84,14 @@ export async function ensureSkill({ force = false, onProgress = () => {} } = {})
     );
     // Eski kopyayı kenara al, yenisini yerine koy, eskisini sil.
     const old = `${dir}.old-${Date.now()}`;
-    if (fs.existsSync(dir)) await fsp.rename(dir, old);
-    await fsp.rename(tmp, dir);
-    if (fs.existsSync(old)) await fsp.rm(old, { recursive: true, force: true });
+    if (fs.existsSync(dir)) await fsp.rename(dir, old).catch(() => fsp.rm(dir, { recursive: true, force: true }));
+    try {
+      await fsp.rename(tmp, dir);
+    } catch {
+      // Windows'ta virüs tarayıcısı klasörü kilitleyebilir; taşımak yerine kopyala.
+      await fsp.cp(tmp, dir, { recursive: true });
+    }
+    if (fs.existsSync(old)) await fsp.rm(old, { recursive: true, force: true }).catch(() => {});
   } catch (err) {
     await fsp.rm(tmp, { recursive: true, force: true });
     throw err;

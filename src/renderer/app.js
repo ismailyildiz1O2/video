@@ -136,8 +136,8 @@ async function renderChecklist() {
   const [settings, skill, reqs] = await Promise.all([api.settings.get(), api.skill.status(), api.requirements()]);
   const items = [
     { ok: settings.hasApiKey, label: 'Anthropic API anahtarı', fix: 'Ayarlar\'dan ekle' },
-    { ok: skill.installed, label: 'cinecode kiti', fix: 'Ayarlar\'dan kur' },
-    ...reqs.map((r) => ({ ok: r.ok, label: r.label, fix: 'Ajan kurmayı teklif eder' })),
+    { ok: skill.installed, label: 'cinecode kiti', fix: state.setupRunning ? 'kuruluyor…' : 'otomatik kurulacak' },
+    ...reqs.map((r) => ({ ok: r.ok, label: r.label, fix: r.auto ? (state.setupRunning ? 'kuruluyor…' : 'otomatik kurulacak') : 'elle kurulmalı' })),
   ];
   box.replaceChildren(
     el('div', { class: 'section-label' }, 'Hazırlık'),
@@ -416,7 +416,10 @@ async function openSettings() {
   $('#skillUpdate').disabled = sk.installed && !sk.managed;
   $('#reqList').replaceChildren(el('li', { class: 'muted' }, 'Denetleniyor…'));
   $('#settingsDlg').showModal();
-  const reqs = await api.requirements();
+  renderReqList(await api.requirements());
+}
+
+function renderReqList(reqs) {
   $('#reqList').replaceChildren(
     ...reqs.map((r) =>
       el(
@@ -424,11 +427,14 @@ async function openSettings() {
         {},
         el('span', { class: r.ok ? 'ok' : 'bad' }, r.ok ? '✓' : '✗'),
         el('span', {}, r.label),
-        el('span', { class: 'dt', title: r.detail }, r.detail),
-        r.ok ? null : el('a', { href: '#', 'data-ext': r.help }, 'İndir'),
+        el('span', { class: 'dt', title: r.detail }, r.ok ? r.detail : r.auto ? 'otomatik kurulacak' : r.detail),
+        r.ok || r.auto ? null : el('a', { href: '#', 'data-ext': r.help }, 'İndir'),
       ),
     ),
   );
+  const missing = reqs.some((r) => !r.ok && r.auto);
+  $('#installMissing').disabled = state.setupRunning || !missing;
+  $('#installMissing').textContent = state.setupRunning ? 'Kuruluyor…' : missing ? 'Eksikleri kur' : 'Hepsi kurulu';
 }
 
 $('#openSettings').addEventListener('click', openSettings);
@@ -436,19 +442,19 @@ $('#pickDir').addEventListener('click', async () => {
   const d = await api.settings.pickDir();
   if (d) $('#projectsDir').value = d;
 });
-$('#skillUpdate').addEventListener('click', async () => {
-  const b = $('#skillUpdate');
-  b.disabled = true;
-  b.textContent = 'İndiriliyor…';
+async function runSetup(opts) {
+  state.setupRunning = true;
+  $('#installMissing').disabled = true;
+  $('#installMissing').textContent = 'Kuruluyor…';
+  $('#skillUpdate').disabled = true;
   try {
-    await api.skill.install(true);
+    await api.setup.run(opts);
   } catch (e) {
-    alert(`cinecode kurulamadı: ${e.message}`);
+    $('#setupProgress').textContent = e.message;
   }
-  await refreshSkillState();
-  $('#settingsDlg').close();
-  openSettings();
-});
+}
+$('#skillUpdate').addEventListener('click', () => runSetup({ forceSkill: true }));
+$('#installMissing').addEventListener('click', () => runSetup());
 $('#settingsForm').addEventListener('submit', async (e) => {
   if (e.submitter?.value !== 'save') return;
   const patch = {
@@ -520,14 +526,30 @@ api.chat.onEvent((ev) => {
   if (ev.kind === 'media-changed') return scheduleMedia();
   render(ev);
 });
-api.skill.onProgress((m) => {
+api.setup.onProgress((m) => {
+  state.setupRunning = true;
   $('#skillState').textContent = m;
-  setTimeout(refreshSkillState, 2500);
+  $('#setupProgress').textContent = m;
+});
+api.setup.onDone(async (r) => {
+  state.setupRunning = false;
+  $('#setupProgress').textContent = r.errors.length ? r.errors.join(' · ') : 'Her şey hazır.';
+  await refreshSkillState();
+  if (r.errors.length) $('#skillState').textContent = 'Kurulum eksik kaldı (Ayarlar)';
+  if ($('#settingsDlg').open) {
+    renderReqList(r.requirements);
+    const sk = r.skill;
+    $('#skillInfo').textContent = sk.installed ? `${sk.dir}${sk.sha ? ` · sürüm ${sk.sha.slice(0, 7)}` : ''}` : 'Kurulu değil.';
+    $('#skillUpdate').disabled = sk.installed && !sk.managed;
+    $('#skillUpdate').textContent = sk.installed ? 'Şimdi güncelle' : 'Kur';
+  }
+  if (!state.current) renderChecklist();
 });
 
 // ---------- başlangıç ----------
 (async function init() {
   state.settings = await api.settings.get();
+  state.setupRunning = await api.setup.running();
   await Promise.all([refreshProjects(), refreshSkillState(), renderChecklist()]);
   if (!state.settings.hasApiKey) openSettings();
 })();

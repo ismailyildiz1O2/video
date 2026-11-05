@@ -25,6 +25,9 @@ jobs:
       - name: Testler
         run: npm run check
 
+      - name: Python, ffmpeg ve Node.js otomatik kurulum testi
+        run: npx electron test/tools-e2e.mjs
+
       - name: Windows kurulum paketini derle
         run: npx electron-builder --win nsis --x64 --publish never
         env:

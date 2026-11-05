@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadSettings, publicSettings, updateSettings, getApiKey } from './settings.mjs';
 import { ensureSkill, skillStatus } from './skill.mjs';
-import { checkRequirements } from './requirements.mjs';
+import { checkRequirements, installMissing } from './requirements.mjs';
 import { listProjects, createProject, listMedia, readChat, readMeta, isInside } from './projects.mjs';
 import { FilmSession } from './session.mjs';
 
@@ -84,7 +84,33 @@ function resetSessions() {
   for (const [d, s] of sessions) if (s.closed) sessions.delete(d);
 }
 
+// Kurulum: cinecode kitini ve eksik araçları (Python, ffmpeg, Node.js) kullanıcıya sormadan kurar.
+let setupPromise = null;
+function runSetup({ forceSkill = false } = {}) {
+  if (setupPromise) return setupPromise;
+  const progress = (m) => send('setup:progress', m);
+  setupPromise = (async () => {
+    const errors = [];
+    try {
+      const st = skillStatus();
+      if (!st.installed || forceSkill || loadSettings().autoUpdateSkill) await ensureSkill({ force: forceSkill, onProgress: progress });
+    } catch (err) {
+      errors.push(`cinecode: ${err.message}`);
+      progress(`cinecode kurulamadı: ${err.message}`);
+    }
+    const r = await installMissing(progress);
+    errors.push(...r.errors);
+    const result = { skill: skillStatus(), requirements: r.requirements, errors };
+    progress(errors.length ? 'Kurulum tamamlanamadı, ayrıntı Ayarlar\'da.' : 'Her şey hazır.');
+    send('setup:done', result);
+    return result;
+  })().finally(() => (setupPromise = null));
+  return setupPromise;
+}
+
 function registerIpc() {
+  ipcMain.handle('setup:run', (_e, opts) => runSetup(opts || {}));
+  ipcMain.handle('setup:running', () => Boolean(setupPromise));
   ipcMain.handle('settings:get', () => publicSettings());
   ipcMain.handle('settings:set', (_e, patch) => {
     const r = updateSettings(patch || {});
@@ -97,9 +123,6 @@ function registerIpc() {
   });
 
   ipcMain.handle('skill:status', () => skillStatus());
-  ipcMain.handle('skill:install', (_e, force) =>
-    ensureSkill({ force: Boolean(force), onProgress: (m) => send('skill:progress', m) }),
-  );
   ipcMain.handle('req:check', () => checkRequirements());
 
   ipcMain.handle('projects:list', () => listProjects(projectsRoot()));
@@ -143,12 +166,8 @@ app.whenReady().then(() => {
   });
   registerIpc();
   createWindow();
-  // Skill'i arka planda kur/güncelle.
-  if (loadSettings().autoUpdateSkill) {
-    ensureSkill({ onProgress: (m) => send('skill:progress', m) }).catch((err) =>
-      send('skill:progress', `cinecode kurulamadı: ${err.message}`),
-    );
-  }
+  // Pencere yüklenince her şeyi arka planda hazırla: cinecode + eksik araçlar.
+  win.webContents.once('did-finish-load', () => runSetup());
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

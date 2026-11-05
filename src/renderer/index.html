@@ -120,7 +120,11 @@
         <div class="field">
           <span>Gereksinimler</span>
           <ul id="reqList" class="req-list"></ul>
-          <small>Eksik olanları ajan da senin onayınla kurmayı teklif eder.</small>
+          <div class="row tight">
+            <button type="button" id="installMissing" class="btn ghost">Eksikleri kur</button>
+            <small id="setupProgress" class="muted"></small>
+          </div>
+          <small>Eksik araçlar uygulamanın kendi klasörüne otomatik kurulur; bilgisayarına başka bir şey yüklenmez.</small>
         </div>
 
         <div class="dlg-actions">

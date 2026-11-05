@@ -5,21 +5,31 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { toolBinDirs, canAutoInstall, installTool } from './tools.mjs';
 
-/** GUI'den açılan uygulamalarda (özellikle macOS) PATH çok kısa olur; yaygın dizinleri ekle. */
+/** GUI'den açılan uygulamalarda (özellikle macOS) PATH çok kısa olur; yaygın dizinleri ekle.
+ *  Uygulamanın kendi kurduğu araçlar (userData/tools) en başa konur. */
 export function augmentedPath() {
   const extra =
     process.platform === 'win32'
       ? []
       : ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin', path.join(os.homedir(), '.local', 'bin')];
-  const parts = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  const current = process.env.PATH || process.env.Path || '';
+  const parts = [...toolBinDirs(), ...current.split(path.delimiter).filter(Boolean)];
   for (const p of extra) if (!parts.includes(p)) parts.push(p);
-  return parts.join(path.delimiter);
+  return [...new Set(parts)].join(path.delimiter);
+}
+
+/** process.env kopyası, PATH'i genişletilmiş. Windows'ta "Path" ile "PATH" çakışmasın diye eskisi silinir. */
+export function envWithPath(extra = {}) {
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.toUpperCase() === 'PATH') delete env[k];
+  return { ...env, PATH: augmentedPath(), ...extra };
 }
 
 function run(cmd, args) {
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout: 8000, env: { ...process.env, PATH: augmentedPath() } }, (err, stdout, stderr) => {
+    execFile(cmd, args, { timeout: 8000, windowsHide: true, env: envWithPath() }, (err, stdout, stderr) => {
       resolve(err ? null : `${stdout}${stderr}`.trim());
     });
   });
@@ -63,7 +73,7 @@ export async function checkRequirements() {
   const py = await firstOk(process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python'], ['--version']);
   const ff = await firstOk(['ffmpeg'], ['-version']);
   const chrome = chromePath();
-  return [
+  const list = [
     {
       id: 'node',
       label: 'Node.js 22+',
@@ -93,4 +103,21 @@ export async function checkRequirements() {
       help: 'https://www.google.com/chrome/',
     },
   ];
+  return list.map((r) => ({ ...r, auto: canAutoInstall(r.id) }));
+}
+
+/** Eksik olup otomatik kurulabilen her şeyi kurar; sonunda güncel durumu döner. */
+export async function installMissing(onProgress = () => {}) {
+  const errors = [];
+  for (const r of await checkRequirements()) {
+    if (r.ok || !r.auto) continue;
+    try {
+      await installTool(r.id, onProgress);
+    } catch (err) {
+      errors.push(`${r.label}: ${err.message}`);
+      onProgress(`${r.label} kurulamadı: ${err.message}`);
+    }
+  }
+  const after = await checkRequirements();
+  return { requirements: after, errors };
 }

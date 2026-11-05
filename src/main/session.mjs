@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { augmentedPath } from './requirements.mjs';
+import { envWithPath } from './requirements.mjs';
 import { readMeta, writeMeta, appendChat } from './projects.mjs';
 
 const require = createRequire(import.meta.url);
@@ -34,6 +34,7 @@ const APPEND_PROMPT = `Bu oturum "Cinecode Studio" masaüstü uygulamasında ça
 - Kullanıcı film yapmak istediğinde cinecode skill'ini kullan.
 - Seçim gerektiren her soruyu AskUserQuestion aracıyla sor; uygulama bunları tıklanabilir kartlar olarak gösterir.
 - Taslakları, kareleri ve son filmi proje klasörüne kaydet ki önizleme panelinde görünsün; dosyanın göreli yolunu metinde de belirt.
+- Python, ffmpeg ve Node.js'i uygulama kendisi kurar ve PATH'e koyar; bunları sistem geneline kurmaya ya da kullanıcıdan kurmasını istemeye çalışma. Bir araç gerçekten eksikse kullanıcıya Ayarlar > "Eksikleri kur" düğmesini söyle.
 - Kullanıcıyla onun dilinde konuş (varsayılan Türkçe).`;
 
 /** Araç çağrısını kısa bir satırla özetle. */
@@ -159,7 +160,7 @@ export class FilmSession {
 
   start() {
     const meta = readMeta(this.dir) || {};
-    const env = { ...process.env, PATH: augmentedPath(), ANTHROPIC_API_KEY: this.apiKey };
+    const env = envWithPath({ ANTHROPIC_API_KEY: this.apiKey });
     delete env.ELECTRON_RUN_AS_NODE;
     delete env.ANTHROPIC_AUTH_TOKEN;
 
