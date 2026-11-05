@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' film: data:; media-src 'self' film:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Cinecode Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sol: filmler -->
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="logo">●</span>
+          <div>
+            <div class="brand-name">Cinecode Studio</div>
+            <div class="brand-sub">Kodla yazılan filmler</div>
+          </div>
+        </div>
+        <button id="newFilm" class="btn primary block">+ Yeni film</button>
+        <div class="section-label">Filmlerim</div>
+        <ul id="projectList" class="project-list"></ul>
+        <div class="sidebar-foot">
+          <div id="skillState" class="skill-state"></div>
+          <button id="openSettings" class="btn ghost block">⚙ Ayarlar</button>
+        </div>
+      </aside>
+
+      <!-- Orta: sohbet -->
+      <main class="chat">
+        <header class="chat-head">
+          <div>
+            <div id="filmTitle" class="film-title">Bir film seçin ya da yeni film başlatın</div>
+            <div id="filmPath" class="film-path"></div>
+          </div>
+          <div class="head-actions">
+            <span id="busy" class="busy hidden"><span class="dot"></span> Çalışıyor…</span>
+            <button id="stopBtn" class="btn ghost hidden">■ Durdur</button>
+            <button id="revealBtn" class="btn ghost hidden">Klasörü aç</button>
+          </div>
+        </header>
+
+        <section id="messages" class="messages">
+          <div id="welcome" class="welcome">
+            <h1>Fikrini söyle, film kodla yazılsın.</h1>
+            <p>
+              Cinecode Studio, <a href="#" data-ext="https://github.com/sarpstar/cinecode">cinecode</a> kitini Claude ile
+              çalıştırır: senaryoyu yazar, her kareyi kodla kurar, sesi tasarlar ve sana bir MP4 verir.
+            </p>
+            <ol>
+              <li>Soldan <b>+ Yeni film</b>'e bas.</li>
+              <li>Fikrini tek cümleyle yaz: <i>“Kar altında giden bir posta treni hakkında 30 saniyelik bir kısa film”</i>.</li>
+              <li>Soruları kartlardan cevapla, taslakları sağdaki panelde izle.</li>
+            </ol>
+            <div id="setupChecklist" class="checklist"></div>
+          </div>
+        </section>
+
+        <form id="composer" class="composer">
+          <textarea id="input" rows="2" placeholder="Mesajını yaz… (Enter gönderir, Shift+Enter yeni satır)" disabled></textarea>
+          <button id="sendBtn" class="btn primary" type="submit" disabled>Gönder</button>
+        </form>
+      </main>
+
+      <!-- Sağ: önizleme -->
+      <aside class="preview">
+        <div class="preview-head">
+          <span>Önizleme</span>
+          <button id="refreshMedia" class="btn ghost small" title="Yenile">↻</button>
+        </div>
+        <div id="player" class="player empty">Henüz bir taslak yok</div>
+        <div class="section-label">Dosyalar</div>
+        <ul id="mediaList" class="media-list"></ul>
+      </aside>
+    </div>
+
+    <!-- Ayarlar -->
+    <dialog id="settingsDlg" class="dlg">
+      <form method="dialog" id="settingsForm">
+        <h2>Ayarlar</h2>
+
+        <label class="field">
+          <span>Anthropic API anahtarı</span>
+          <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" />
+          <small id="apiKeyHint"></small>
+          <small>Anahtar bilgisayarının anahtar zincirinde şifreli saklanır. <a href="#" data-ext="https://console.anthropic.com/settings/keys">Anahtar al</a></small>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Model</span>
+            <select id="model"></select>
+          </label>
+          <label class="field">
+            <span>Çaba (effort)</span>
+            <select id="effort"></select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Filmlerin kaydedileceği klasör</span>
+          <div class="row tight">
+            <input id="projectsDir" type="text" readonly />
+            <button type="button" id="pickDir" class="btn ghost">Seç…</button>
+          </div>
+        </label>
+
+        <div class="field">
+          <span>cinecode kiti</span>
+          <div id="skillInfo" class="muted"></div>
+          <div class="row tight">
+            <button type="button" id="skillUpdate" class="btn ghost">Şimdi güncelle</button>
+            <label class="check"><input id="autoUpdateSkill" type="checkbox" /> Açılışta otomatik güncelle</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Gereksinimler</span>
+          <ul id="reqList" class="req-list"></ul>
+          <small>Eksik olanları ajan da senin onayınla kurmayı teklif eder.</small>
+        </div>
+
+        <div class="dlg-actions">
+          <button value="cancel" class="btn ghost">Kapat</button>
+          <button id="saveSettings" value="save" class="btn primary">Kaydet</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Yeni film -->
+    <dialog id="newDlg" class="dlg small">
+      <form method="dialog">
+        <h2>Yeni film</h2>
+        <label class="field">
+          <span>Filmin adı</span>
+          <input id="newName" type="text" placeholder="örn. Posta Treni" />
+        </label>
+        <label class="field">
+          <span>Fikrin (isteğe bağlı, ilk mesaj olarak gönderilir)</span>
+          <textarea id="newIdea" rows="3" placeholder="Kar altında giden bir posta treni hakkında 30 saniyelik bir kısa film yapmak istiyorum."></textarea>
+        </label>
+        <div class="dlg-actions">
+          <button value="cancel" class="btn ghost">Vazgeç</button>
+          <button id="createFilm" value="create" class="btn primary">Oluştur</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
