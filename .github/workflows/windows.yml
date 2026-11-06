@@ -26,7 +26,14 @@ jobs:
         run: npm run check
 
       - name: Python, ffmpeg ve Node.js otomatik kurulum testi
-        run: npx electron test/tools-e2e.mjs
+        timeout-minutes: 20
+        shell: pwsh
+        env:
+          ELECTRON_ENABLE_LOGGING: "1"
+        run: |
+          $p = Start-Process -FilePath "node_modules/electron/dist/electron.exe" -ArgumentList "test/tools-e2e.mjs" -PassThru -Wait -NoNewWindow
+          Get-Content tools-e2e.log
+          if ($p.ExitCode -ne 0) { throw "Kurulum testi başarısız (çıkış kodu $($p.ExitCode))" }
 
       - name: Windows kurulum paketini derle
         run: npx electron-builder --win nsis --x64 --publish never
