@@ -31,7 +31,10 @@ jobs:
         env:
           ELECTRON_ENABLE_LOGGING: "1"
         run: |
-          $p = Start-Process -FilePath "node_modules/electron/dist/electron.exe" -ArgumentList "test/tools-e2e.mjs" -PassThru -Wait -NoNewWindow
+          $exe = node -p "require('electron')"
+          Write-Host "Electron: $exe"
+          if (-not (Test-Path $exe)) { node node_modules/electron/install.js; $exe = node -p "require('electron')" }
+          $p = Start-Process -FilePath $exe -ArgumentList "test/tools-e2e.mjs" -PassThru -Wait -NoNewWindow
           Get-Content tools-e2e.log
           if ($p.ExitCode -ne 0) { throw "Kurulum testi başarısız (çıkış kodu $($p.ExitCode))" }
 
