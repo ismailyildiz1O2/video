@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadSettings, publicSettings, updateSettings, getApiKey } from './settings.mjs';
 import { ensureSkill, skillStatus } from './skill.mjs';
 import { checkRequirements, installMissing } from './requirements.mjs';
-import { listProjects, createProject, listMedia, readChat, readMeta, isInside } from './projects.mjs';
+import { listProjects, createProject, listMedia, readChat, readMeta, isInside, addRefs, REF_EXT } from './projects.mjs';
 import { FilmSession } from './session.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -135,10 +135,24 @@ function registerIpc() {
   });
   ipcMain.handle('media:list', (_e, dir) => listMedia(assertProject(dir)));
 
-  ipcMain.handle('chat:send', (_e, dir, text) => {
+  ipcMain.handle('chat:send', (_e, dir, text, refs) => {
     dir = assertProject(dir);
-    if (!String(text || '').trim()) return;
-    getSession(dir).send(String(text));
+    const files = (Array.isArray(refs) ? refs : []).map(String).filter((p) => isInside(dir, p) && fs.existsSync(p));
+    if (!String(text || '').trim() && !files.length) return;
+    getSession(dir).send(String(text || ''), files);
+  });
+  ipcMain.handle('refs:add', (_e, dir, paths) => addRefs(assertProject(dir), (Array.isArray(paths) ? paths : []).map(String)));
+  ipcMain.handle('refs:pick', async (_e, dir) => {
+    dir = assertProject(dir);
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Referans dosyaları seç',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Görsel, video, ses', extensions: REF_EXT.map((e) => e.slice(1)) },
+        { name: 'Tüm dosyalar', extensions: ['*'] },
+      ],
+    });
+    return r.canceled ? [] : addRefs(dir, r.filePaths);
   });
   ipcMain.handle('chat:answer', (_e, dir, id, value) => sessions.get(assertProject(dir))?.answer(id, value));
   ipcMain.handle('chat:interrupt', (_e, dir) => sessions.get(assertProject(dir))?.interrupt());

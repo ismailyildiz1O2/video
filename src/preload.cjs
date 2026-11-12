@@ -1,5 +1,5 @@
 // Arayüze açılan güvenli köprü. Node erişimi yok; sadece bu fonksiyonlar.
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const on = (channel) => (cb) => {
   const h = (_e, payload) => cb(payload);
@@ -30,7 +30,7 @@ contextBridge.exposeInMainWorld('studio', {
     media: (dir) => ipcRenderer.invoke('media:list', dir),
   },
   chat: {
-    send: (dir, text) => ipcRenderer.invoke('chat:send', dir, text),
+    send: (dir, text, refs) => ipcRenderer.invoke('chat:send', dir, text, refs),
     answer: (dir, id, value) => ipcRenderer.invoke('chat:answer', dir, id, value),
     interrupt: (dir) => ipcRenderer.invoke('chat:interrupt', dir),
     onEvent: on('session:event'),
@@ -40,5 +40,10 @@ contextBridge.exposeInMainWorld('studio', {
     reveal: (p) => ipcRenderer.invoke('shell:reveal', p),
     external: (url) => ipcRenderer.invoke('shell:external', url),
   },
+  refs: {
+    add: (dir, paths) => ipcRenderer.invoke('refs:add', dir, paths),
+    pick: (dir) => ipcRenderer.invoke('refs:pick', dir),
+  },
+  pathForFile: (file) => webUtils.getPathForFile(file),
   mediaUrl: (p) => `film://media/${encodeURIComponent(p)}`,
 });

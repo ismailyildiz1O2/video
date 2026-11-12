@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createProject, listProjects, listMedia, isInside, appendChat, readChat, writeMeta, readMeta } from '../src/main/projects.mjs';
+import { createProject, listProjects, listMedia, isInside, appendChat, readChat, writeMeta, readMeta, addRefs } from '../src/main/projects.mjs';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cinecode-test-'));
 try {
@@ -34,6 +34,12 @@ try {
   writeMeta(a.dir, { sessionId: 'abc' });
   assert.equal(readMeta(a.dir).sessionId, 'abc');
   assert.equal(readMeta(a.dir).name, 'Posta Treni: Kış');
+  const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cinecode-src-'));
+  fs.writeFileSync(path.join(srcDir, 'gün batımı.jpg'), 'x');
+  fs.writeFileSync(path.join(srcDir, 'not.txt'), 'x');
+  const refs = await addRefs(a.dir, [path.join(srcDir, 'gün batımı.jpg'), path.join(srcDir, 'not.txt'), path.join(srcDir, 'gün batımı.jpg')]);
+  assert.deepEqual(refs.map((r) => r.rel), ['refs/gün-batımı.jpg', 'refs/gün-batımı-2.jpg']);
+  fs.rmSync(srcDir, { recursive: true, force: true });
   console.log('smoke: tamam');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });

@@ -1,7 +1,7 @@
 {
   "name": "cinecode-studio",
   "productName": "Cinecode Studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "cinecode skill'i için masaüstü uygulaması: fikrini yaz, Claude filmi kodla üretsin.",
   "main": "src/main/main.mjs",
   "type": "module",

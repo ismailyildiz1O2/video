@@ -120,3 +120,30 @@ export function readChat(dir) {
     return [];
   }
 }
+
+// Referans dosyaları: kullanıcının eklediği görsel/video/ses dosyaları <film>/refs/ içine kopyalanır.
+// cinecode referansları bu klasörden okur (refs/ ve refs/type/).
+export const REF_EXT = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.mov', '.webm', '.mp3', '.wav', '.m4a'];
+
+export async function addRefs(dir, sources) {
+  const refsDir = path.join(dir, 'refs');
+  await fsp.mkdir(refsDir, { recursive: true });
+  const out = [];
+  for (const src of sources) {
+    const ext = path.extname(src).toLowerCase();
+    if (!REF_EXT.includes(ext)) continue;
+    let st;
+    try {
+      st = await fsp.stat(src);
+    } catch {
+      continue;
+    }
+    if (!st.isFile()) continue;
+    const base = path.basename(src, path.extname(src)).replace(/[^\p{L}\p{N}._-]+/gu, '-').slice(0, 60) || 'ref';
+    let dest = path.join(refsDir, base + ext);
+    for (let i = 2; fs.existsSync(dest); i++) dest = path.join(refsDir, `${base}-${i}${ext}`);
+    await fsp.copyFile(src, dest);
+    out.push({ path: dest, rel: path.relative(dir, dest).split(path.sep).join('/') });
+  }
+  return out;
+}

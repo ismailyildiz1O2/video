@@ -60,9 +60,14 @@
         </section>
 
         <form id="composer" class="composer">
-          <textarea id="input" rows="2" placeholder="Mesajını yaz… (Enter gönderir, Shift+Enter yeni satır)" disabled></textarea>
+          <button id="attachBtn" class="btn ghost attach" type="button" title="Referans görsel, video ya da şarkı ekle" disabled>📎</button>
+          <div class="composer-main">
+            <div id="attachments" class="attachments hidden"></div>
+            <textarea id="input" rows="2" placeholder="Mesajını yaz… Referans görsel eklemek için 📎 ya da dosyayı buraya sürükle." disabled></textarea>
+          </div>
           <button id="sendBtn" class="btn primary" type="submit" disabled>Gönder</button>
         </form>
+        <div id="dropHint" class="drop-hint hidden">Referans dosyalarını bırak</div>
       </main>
 
       <!-- Sağ: önizleme -->

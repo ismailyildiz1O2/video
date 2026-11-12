@@ -103,10 +103,20 @@ export class FilmSession {
     }
   }
 
-  send(text) {
+  /** @param {string} text @param {string[]} refs proje içindeki referans dosyalarının mutlak yolları */
+  send(text, refs = []) {
     if (this.closed) return;
-    this.out({ kind: 'user', text });
-    this.queue.push(text);
+    this.out({ kind: 'user', text, refs: refs.length ? refs : undefined });
+    let prompt = text.trim() || 'Referans dosyaları ekledim.';
+    if (refs.length) {
+      const rel = refs.map((p) => path.relative(this.dir, p).split(path.sep).join('/'));
+      prompt +=
+        `\n\n[Kullanıcı ${rel.length} referans dosyası ekledi, proje klasöründe: ${rel.join(', ')}. ` +
+        'Görselleri Read ile açıp incele; videoları ve şarkıları cinecode\'un referans video / şarkı adımlarıyla değerlendir. ' +
+        'Bunları filmin görünümü, rengi, ışığı, tipografisi ya da biçimi için referans olarak kullan ve neyi nasıl kullanacağını kısaca söyle. ' +
+        'Görüntüleri doğrudan filme koyma; sadece ilham ve ölçü olarak kullan.]';
+    }
+    this.queue.push(prompt);
     this.setBusy(true);
     this.waiter?.();
     if (!this.q) this.start();

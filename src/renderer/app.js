@@ -12,7 +12,18 @@ const state = {
   media: [],
   playing: null,
   live: new Set(), // aktif (cevap bekleyen) kart id'leri
+  attachments: [], // gönderilmeyi bekleyen referans dosyaları {path, rel}
 };
+
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+function thumb(p, extra = {}) {
+  const e = p.split('.').pop().toLowerCase();
+  const name = p.split(/[\\/]/).pop();
+  const inner = IMG_EXT.includes(e)
+    ? el('img', { src: api.mediaUrl(p), alt: name })
+    : el('span', {}, (['mp4', 'mov', 'webm'].includes(e) ? '🎬 ' : '🔊 ') + name.slice(0, 18));
+  return el('div', { class: 'att', title: name, ...extra }, inner);
+}
 
 // ---------- yardımcılar ----------
 function esc(s) {
@@ -157,6 +168,9 @@ async function openProject(dir) {
   $('#revealBtn').classList.remove('hidden');
   $('#input').disabled = false;
   $('#sendBtn').disabled = false;
+  $('#attachBtn').disabled = false;
+  state.attachments = [];
+  renderAttachments();
   $('#messages').replaceChildren();
   // Geçmişi çiz; cevaplanmış kartları kapalı göster.
   const resolved = new Map(r.history.filter((e) => e.kind === 'resolved').map((e) => [e.id, e.value]));
@@ -192,9 +206,12 @@ function scrollDown(force = false) {
 function render(ev, ctx = {}) {
   const box = $('#messages');
   switch (ev.kind) {
-    case 'user':
-      box.append(el('div', { class: 'msg user' }, ev.text));
+    case 'user': {
+      const m = el('div', { class: 'msg user' }, ev.text || '');
+      if (ev.refs?.length) m.append(el('div', { class: 'msg-refs' }, ev.refs.map((p) => thumb(p, { onclick: () => api.shell.open(p) }))));
+      box.append(m);
       break;
+    }
     case 'assistant':
       box.append(el('div', { class: 'msg assistant', html: md(ev.text) }));
       break;
@@ -494,10 +511,72 @@ $('#newDlg').addEventListener('close', async () => {
 });
 
 // ---------- gönderme ----------
+// ---------- referans dosyaları ----------
+function renderAttachments() {
+  const box = $('#attachments');
+  box.classList.toggle('hidden', !state.attachments.length);
+  box.replaceChildren(
+    ...state.attachments.map((a, i) => {
+      const t = thumb(a.path);
+      t.append(
+        el('button', {
+          type: 'button',
+          class: 'x',
+          title: 'Kaldır',
+          onclick: () => {
+            state.attachments.splice(i, 1);
+            renderAttachments();
+          },
+        }, '✕'),
+      );
+      return t;
+    }),
+  );
+}
+function addAttachments(list) {
+  for (const a of list || []) if (!state.attachments.some((x) => x.path === a.path)) state.attachments.push(a);
+  renderAttachments();
+  $('#input').focus();
+}
+$('#attachBtn').addEventListener('click', async () => {
+  if (state.current) addAttachments(await api.refs.pick(state.current));
+});
+let dragDepth = 0;
+const chatEl = document.querySelector('.chat');
+chatEl.addEventListener('dragenter', (e) => {
+  if (!state.current || !e.dataTransfer?.types.includes('Files')) return;
+  e.preventDefault();
+  dragDepth++;
+  $('#dropHint').classList.remove('hidden');
+});
+chatEl.addEventListener('dragover', (e) => {
+  if (state.current && e.dataTransfer?.types.includes('Files')) e.preventDefault();
+});
+chatEl.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) {
+    dragDepth = 0;
+    $('#dropHint').classList.add('hidden');
+  }
+});
+chatEl.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $('#dropHint').classList.add('hidden');
+  if (!state.current) return;
+  const paths = [...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean);
+  if (paths.length) addAttachments(await api.refs.add(state.current, paths));
+});
+// Pencereye bırakılan dosya uygulamayı terk etmesin.
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
 async function sendMessage(text) {
-  if (!state.current || !text.trim()) return;
+  const refs = state.attachments.map((a) => a.path);
+  if (!state.current || (!text.trim() && !refs.length)) return;
+  state.attachments = [];
+  renderAttachments();
   try {
-    await api.chat.send(state.current, text);
+    await api.chat.send(state.current, text, refs);
   } catch (e) {
     render({ kind: 'error', text: e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') });
   }
