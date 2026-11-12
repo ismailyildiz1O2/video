@@ -6,7 +6,7 @@
 
 - **Film projeleri:** Her film kendi klasöründe durur (varsayılan: `Belgeler/Cinecode Filmleri`). Sohbet ve ajan oturumu kaydedilir; uygulamayı kapatıp açınca kaldığın yerden devam edersin.
 - **Sohbet + soru kartları:** cinecode'un soruları (mod, amaç, görünüm, ses…) tıklanabilir kartlar olarak gelir. ★ önerilen seçeneklerdir. "Diğer" kutusuna kendi cevabını da yazabilirsin.
-- **İzinler:** Ajan bir komut çalıştırmak istediğinde (render, ffmpeg…) sorar. "Bu oturumda tüm komutlara izin ver" ile tekrar tekrar sorulmaz. Proje klasöründeki dosya yazma ve düzenlemeler otomatik onaylanır.
+- **İzinler:** Varsayılan olarak ajan komutları onay beklemeden çalıştırır (Ayarlar > "İzin sormadan devam et"). Bu kapatılırsa her komut için izin kartı çıkar; "Bu oturumda tüm komutlara izin ver" ile tekrar tekrar sorulmaz.
 - **Önizleme paneli:** Projedeki taslaklar, kareler ve ses dosyaları sağ panelde listelenir. Yeni bir video oluşunca kendiliğinden oynatılır.
 - **cinecode kiti otomatik kurulur:** İlk açılışta GitHub'dan indirilir (git gerekmez) ve `~/.claude/skills/cinecode` klasörüne konur. Açılışta güncellenir. Kiti daha önce elle kurduysan o kopya kullanılır ve uygulama ona dokunmaz.
 - **Eksik araçlar kendiliğinden kurulur:** Python, ffmpeg ve Node.js yoksa uygulama bunların taşınabilir sürümlerini kendi klasörüne indirir (Windows ve Linux'ta üçü de; macOS'ta Python ve Node.js). Bilgisayara sistem geneli bir şey yüklenmez. Chrome yerine Windows'taki Edge de kullanılabilir.

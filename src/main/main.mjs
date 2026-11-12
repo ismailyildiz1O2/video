@@ -114,6 +114,7 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => publicSettings());
   ipcMain.handle('settings:set', (_e, patch) => {
     const r = updateSettings(patch || {});
+    if (r.autoApprove) for (const s of sessions.values()) s.approvePending();
     resetSessions(); // yeni model/anahtar sonraki mesajda geçerli olsun
     return r;
   });

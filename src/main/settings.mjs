@@ -12,6 +12,7 @@ const DEFAULTS = {
   apiKeyEnc: null, // base64, safeStorage ile şifreli
   apiKeyPlain: null, // safeStorage kullanılamıyorsa (bazı Linux masaüstleri)
   autoUpdateSkill: true,
+  autoApprove: true, // ajan komut/dosya izinlerini sormadan devam eder (sorular yine sorulur)
 };
 
 export const MODELS = [
@@ -60,6 +61,7 @@ export function publicSettings() {
     effort: s.effort,
     projectsDir: s.projectsDir,
     autoUpdateSkill: s.autoUpdateSkill,
+    autoApprove: s.autoApprove,
     hasApiKey: Boolean(key),
     apiKeyHint: key ? `${key.slice(0, 7)}…${key.slice(-4)}` : null,
     models: MODELS,
@@ -86,6 +88,7 @@ export function updateSettings(patch) {
   if (patch.effort && EFFORTS.includes(patch.effort)) s.effort = patch.effort;
   if (typeof patch.projectsDir === 'string' && patch.projectsDir) s.projectsDir = patch.projectsDir;
   if (typeof patch.autoUpdateSkill === 'boolean') s.autoUpdateSkill = patch.autoUpdateSkill;
+  if (typeof patch.autoApprove === 'boolean') s.autoApprove = patch.autoApprove;
   save(s);
   return publicSettings();
 }

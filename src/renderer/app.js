@@ -408,6 +408,7 @@ async function openSettings() {
   $('#effort').replaceChildren(...s.efforts.map((x) => el('option', { value: x, selected: x === s.effort ? '' : null }, x)));
   $('#projectsDir').value = s.projectsDir;
   $('#autoUpdateSkill').checked = s.autoUpdateSkill;
+  $('#autoApprove').checked = s.autoApprove;
   const sk = await api.skill.status();
   $('#skillInfo').textContent = sk.installed
     ? `${sk.dir}${sk.managed ? ` · sürüm ${sk.sha ? sk.sha.slice(0, 7) : '?'}` : ' · elle kurulmuş (uygulama dokunmaz)'}`
@@ -462,6 +463,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
     effort: $('#effort').value,
     projectsDir: $('#projectsDir').value,
     autoUpdateSkill: $('#autoUpdateSkill').checked,
+    autoApprove: $('#autoApprove').checked,
   };
   if ($('#apiKey').value.trim()) patch.apiKey = $('#apiKey').value.trim();
   state.settings = await api.settings.set(patch);

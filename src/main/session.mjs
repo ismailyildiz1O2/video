@@ -9,6 +9,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { envWithPath } from './requirements.mjs';
 import { readMeta, writeMeta, appendChat } from './projects.mjs';
+import { loadSettings } from './settings.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -145,6 +146,9 @@ export class FilmSession {
       if (!res) return { behavior: 'deny', message: 'Kullanıcı soruyu cevaplamadı.' };
       return { behavior: 'allow', updatedInput: { ...input, answers: res.answers, annotations: res.annotations } };
     }
+    // "İzin sormadan devam et" açıksa her araç çağrısı onaylanır; ayar canlı okunur,
+    // böylece Ayarlar'dan değiştirince hemen geçerli olur.
+    if (loadSettings().autoApprove) return { behavior: 'allow', updatedInput: input };
     const res = await this.ask('permission', { toolName, summary: summarizeTool(toolName, input) }, signal);
     if (res?.allow) {
       // Bash için "hep izin ver": cinecode çok sayıda farklı komut çalıştırır (render, ffmpeg, kontroller);
@@ -223,6 +227,11 @@ export class FilmSession {
     }
     this.q = null;
     this.setBusy(false);
+  }
+
+  /** Ayar açılınca bekleyen izin kartlarını onaylar. */
+  approvePending() {
+    for (const [id, p] of this.pending) if (p.kind === 'permission') this.answer(id, { allow: true });
   }
 
   async interrupt() {
